@@ -6,9 +6,10 @@ MODULE AutoPickAndPlace
         pose place;
     ENDRECORD
 
-    PERS tooldata gripper:=[TRUE,[[142.500,0.000,32.500],[0.5000,0.5000,-0.5000,-0.5000]],[2.0,[142.500,0.000,32.500],[1,0,0,0],0,0,0]];
-    TASK PERS wobjdata frame:=[FALSE,TRUE,"",[[504.290,681.790,193.620],[-0.6969,0.0012,0.0021,0.7172]],[[0,0,0],[1,0,0,0]]];
-
+    PERS tooldata gripper:=[TRUE,[[6.667,0.000,88.382],[0.0000,0.7071,-0.7071,0.0000]],[2.0,[6.667,0.000,88.382],[1,0,0,0],0,0,0]];
+    TASK PERS wobjdata frame:=[FALSE,TRUE,"",[[500.900,678.200,192.100],[-0.6991,0.0012,0.0028,0.7150]],[[0,0,0],[1,0,0,0]]];
+    
+    
     ! PERS string IP:="192.168.0.3";
     PERS string IP:="127.0.0.1";
     PERS num port:=1025;
@@ -20,7 +21,7 @@ MODULE AutoPickAndPlace
         ConfL\Off;
 
         MoveAbsJ [[0.000,0.000,18.000,0.000,-18.000,0.000],exj],v500,fine,gripper\WObj:=frame;
-        PulseDO DO10_2;
+        SetDO \Sync ,DO10_1,0;
 
         ClientConnect;
 
@@ -113,7 +114,7 @@ MODULE AutoPickAndPlace
 
         ! pick offset grip       
         MoveL Offs(pick,0,0,0),speed1,zone1,gripper\WObj:=frame;
-        PulseDO DO10_1;
+        SetDO \Sync ,DO10_1,1;
         WaitTime 0.25;
 
         ! pick offset aligned loaded       
@@ -137,7 +138,7 @@ MODULE AutoPickAndPlace
 
         ! place offset grip       
         MoveL Offs(place,0,0,0),speed1,zone1,gripper\WObj:=frame;
-        PulseDO DO10_2;
+        SetDO \Sync ,DO10_1,0;
         WaitTime 0.25;
 
         ! place offset aligned loaded       

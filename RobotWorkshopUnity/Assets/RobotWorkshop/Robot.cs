@@ -41,10 +41,12 @@ public class Robot : MonoBehaviour
     bool _robotAwaiting = false;
     Mode _mode;
     Team _team;
+
     string _robotMessage = "Press connect.";
 
     void Initialize()
     {
+
         _selectedMaterial = new Material(_material)
         {
             color = Color.red

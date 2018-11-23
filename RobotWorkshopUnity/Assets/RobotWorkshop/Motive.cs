@@ -19,7 +19,7 @@ public class Motive : IDisposable
 
     public bool showDebugObject = true;
 
-  //  private IPEndPoint mRemoteIpEndPoint;
+    // private IPEndPoint mRemoteIpEndPoint;
     private Socket mDataListner;
     private byte[] mDataReceiveBuffer;
 

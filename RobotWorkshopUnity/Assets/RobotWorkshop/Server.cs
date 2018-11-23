@@ -6,9 +6,9 @@ using UnityEngine;
 
 class Server : IDisposable
 {
-    public bool Connected { get { return client != null && client.Connected; } }
-    TcpListener server;
-    TcpClient client;
+    public bool Connected { get { return _client != null && _client.Connected; } }
+    TcpListener _server;
+    TcpClient _client;
 
     public Server(string ip, int port)
     {
@@ -19,17 +19,17 @@ class Server : IDisposable
     {
         try
         {
-            server = new TcpListener(IPAddress.Parse(ip), port);
-            server.Start();
-            client = server.AcceptTcpClient();
-            Debug.Log(String.Format("Connected to: ", client.Client.RemoteEndPoint.ToString()));
+            _server = new TcpListener(IPAddress.Parse(ip), port);
+            _server.Start();
+            _client = _server.AcceptTcpClient();
+            Debug.Log($"Connected to: {_client.Client.RemoteEndPoint}");
         }
         catch (SocketException e)
         {
-            Debug.Log(String.Format("SocketException: {0}", e));
+            Debug.Log($"SocketException: {e}");
         }
 
-        server.Server.LingerState = new LingerOption(true, 60);
+        _server.Server.LingerState = new LingerOption(true, 60);
     }
 
     public int Read()
@@ -42,7 +42,7 @@ class Server : IDisposable
             return -1;
         }
 
-        var stream = client.GetStream();
+        var stream = _client.GetStream();
 
         do
         {
@@ -63,14 +63,14 @@ class Server : IDisposable
             return;
         }
 
-        var stream = client.GetStream();
+        var stream = _client.GetStream();
         stream.Write(bytes, 0, bytes.Length);
     }
 
     public void Dispose()
     {
-        if (client != null) client.Close();
-        if (client != null) server.Stop();
+        if (_client != null) _client.Close();
+        if (_client != null) _server.Stop();
         Debug.Log("Disconnected.");
     }
 
