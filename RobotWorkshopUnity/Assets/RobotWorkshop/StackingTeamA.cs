@@ -4,6 +4,7 @@ using UnityEngine;
 using static UnityEngine.Mathf;
 
 
+
 public class StackingTeamA : IStackable
 {
     private class Block
@@ -12,34 +13,18 @@ public class StackingTeamA : IStackable
         public int Layer;
         public Domain Base;
         public List<Block> ConnectedBaseBlocks = new List<Block>();
-        public BaseMass ConnectedBase = new BaseMass();
-        public BaseMass AvailableSpace = new BaseMass();
-        public bool RobotBlock = false;
 
-        public Block(Orient orient, Vector3 size, bool robotBlock)
+        public Block(Orient orient, Vector3 size)
         {
             Orient = orient;
-            RobotBlock = robotBlock;
-            if (RobotBlock)
-            {
-                Base = new Domain(Orient.Center.x - size.y / 2, Orient.Center.x + size.y / 2);
-            }
-            else
-            {
-                Base = new Domain(Orient.Center.x - size.x / 2, Orient.Center.x + size.x / 2);
-            }
-
-
+            Base = new Domain(Orient.Center.x - size.x / 2, Orient.Center.x + size.x / 2);
         }
-
-
     }
 
     private class Domain
     {
         public float Min, Max;
         public float Center, Size;
-        public Block ConnectedBlock;
 
         public Domain()
         {
@@ -51,57 +36,6 @@ public class StackingTeamA : IStackable
             Max = max;
             Center = Min + (Max - Min) / 2;
             Size = Mathf.Abs(Max - Min);
-        }
-
-
-    }
-
-    private class BaseMass
-    {
-        public List<Domain> Bases = new List<Domain>();
-        public Domain FirstBase { get { return Bases.First(); } }
-        public Vector2 CenterWeight;
-
-        public BaseMass()
-        {
-        }
-
-        public BaseMass(float minX, float maxX)
-        {
-            AddDomain(new Domain(minX, maxX));
-        }
-
-        public void AddDomain(Domain dom)
-        {
-            Bases.Add(dom);
-            CenterWeight = GetCenterAndWeight(Bases);// returns the center [0] and weight [1]
-
-        }
-
-        /// <summary>
-        /// returns the global center (.x) and weight (.y)
-        /// </summary>
-        /// <param name="bases">List of all the relevant base domains</param>
-        public static Vector2 GetCenterAndWeight(List<Domain> bases)
-        {
-            float totalCenter = 0;
-            float totalWeight = 0;
-
-            foreach (var dom in bases)
-            {
-                float center = dom.Center;
-                float weight = dom.Size;
-                if (totalCenter == 0)
-                {
-                    totalCenter = center;
-                }
-                else
-                {
-                    totalCenter = (totalCenter * totalWeight + center * weight) / (totalWeight + weight);
-                }
-                totalWeight += weight;
-            }
-            return new Vector2(totalCenter, totalWeight);
         }
     }
 
@@ -115,20 +49,15 @@ public class StackingTeamA : IStackable
     readonly Rect _rectStack, _rectConstruction;
     readonly float _gap = 0.002f;
     readonly ICamera _camera;
-    readonly float _tolerance = 0.02f;
-    readonly float _minProblem = -1f;
-    int _timesLooped = 0;
-    Mode _mode;
-    bool _placeRobotBlock = false;
-    float _min, _max;
+    readonly float _tolerance = 0.01f;
 
-    List<Orient> _placedTiles = new List<Orient>();
+    Mode _mode;
+
     List<Block> _structure;
 
-    bool _human = true;
-    int _tileCount = 0;
-    int _layers;
-    List<Orient> _pickTiles = new List<Orient>();
+    bool _human = true, _wait = true;
+    int _numberOfLayers;
+    float _gripperSpace = 0.03f;
 
     //GLOBAL CONSTRUCTOR_______________________________________________________________________
     public StackingTeamA(Mode mode)
@@ -147,46 +76,21 @@ public class StackingTeamA : IStackable
             _camera = new LiveCamera();
     }
 
-
     public PickAndPlaceData GetNextTargets()
     {
-        if (_human)
+        if (_wait)
         {
-            Debug.Log("Human");
-            //search for new blocks in the top layer
-            if (!ScanForNewTiles()) return null;
-            
-            SetLayer();
-
-            if (_layers < 1) return null;
-            _human = false;
+            _wait = false;
+            Message = "Waiting for human interaction";
             return null;
         }
-        else
+        if (_human)
         {
-            Debug.Log("Robot");
-            _human = true;
-            
-            var topLayer = ScanConstruction(_rectStack);
-            if (topLayer.Count() == 0) return null;
-            var pick = topLayer.First();
-
-            // check if there are at least 2 layers
-           // if (_layers < 1) return null;
-
-            //Get The previous block
-            var topBlock = _structure.Where(x => x.Layer == _layers).First();
-            var place = new Orient(GetNextOrientX(), (_layers + 2) * (_tileSize.y + _gap), topBlock.Orient.Center.z, 0);
-
-            _structure.Add(new Block(place, _tileSize, false));
-            SetLayer();
-
-            _timesLooped++;
-            //Debug.Log($"Times looped: {_timesLooped}");
-
-            return new PickAndPlaceData { Pick = pick, Place = place, Retract = true };
+            if (!ScanForNewTiles()) return null;
+            _human = false;
+            return (GetNextOrient());
         }
-
+        else return (GetNextOrient());
     }
 
     bool ScanForNewTiles()
@@ -198,86 +102,143 @@ public class StackingTeamA : IStackable
             return false;
         }
 
-        _structure.AddRange(newTiles.Select(x => new Block(x, _tileSize, false)));
-        Debug.Log($"{_structure.Count} blocks in structure");
-        _min = _structure.First().Base.Min;
-        _max = _structure.First().Base.Max;
-
-
-        foreach (var block in _structure)
+        //Make sure that there are no duplicates
+        //get the layer of the scanned elements
+        int scannedLayer = (int)((newTiles.First().Center.y - (_tileSize.y / 2)) / _tileSize.y);
+        if (scannedLayer == _numberOfLayers && _mode == Mode.Live)
         {
-            if (block.Base.Min > _min) _min = block.Base.Min;
-            if (block.Base.Max < _max) _max = block.Base.Max;
+            //remove the top layer
+            var topLayer = _structure.Where(s => s.Layer == _numberOfLayers);
+            foreach (var block in topLayer)
+            {
+                _structure.Remove(block);
+            }
         }
 
-        Debug.Log(_structure.Count());
+        //Assign the scanned blocks to _structure
+        _structure.AddRange(newTiles.Select(x => new Block(x, _tileSize)));
+        Debug.Log($"{_structure.Count} blocks in structure");
+
         return true;
     }
 
-    float GetNextOrientX()
+    PickAndPlaceData GetNextOrient()
     {
-        Block topBlock = _structure.Where(s => s.Layer == _layers).First();
-        Block bottomBlock = _structure.Where(s => s.Layer == _layers - 1).First();
-        Domain blockBase;
+        var topLayer = _structure.Where(s => s.Layer == _numberOfLayers).ToList();
+        PickAndPlaceData nextPickAndPlace = new PickAndPlaceData();
 
-        if (topBlock.Base.Center > bottomBlock.Base.Center)
+        //order list ascending (small X to large X)
+        topLayer = topLayer.OrderBy(o => o.Base.Center).ToList(); //checked and worked
+
+        //check the distance between the two blocks
+        if (topLayer.Count() == 2)
         {
-            blockBase = new Domain(bottomBlock.Base.Max, topBlock.Base.Min);
-            //Debug.Log($"blockbase{blockBase.Size}");
+            float distance = Mathf.Abs(topLayer.First().Base.Center - topLayer.Last().Base.Center) - _tileSize.x;
+
+            if (distance > _tileSize.x / 2 - 2 * _tolerance && distance < _tileSize.x + 2 * _gripperSpace)
+            {
+                Message = "Scenario A";
+                //Scenario A: check if the two blocks are too far away
+                Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 0);
+                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = true };
+                _structure.Remove(topLayer.Last());
+                _structure.Add(new Block(place, _tileSize));
+                Debug.Log("A: Too far");
+            }
+            else if (distance > 2 * _tileSize.x - 2 * _tolerance)
+            {
+                Message = "Scenario B";
+                //Scenario B: check if the blocks are too close to eachother to fit another block, but too far to use the topspace
+                Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 0);
+                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = true };
+                _structure.Remove(topLayer.Last());
+                _structure.Add(new Block(place, _tileSize));
+                Debug.Log("B: Too close");
+            }
+            else if (distance > _tileSize.x)
+            {
+                Message = "Scenario C";
+                //Scenario C: place the block in the middle of the other blocks
+                Debug.Log("C: Perfect fit between Blocks");
+
+                // Get a new block from the stack
+                var availableStack = ScanConstruction(_rectStack);
+                //check if it actually scanned blocks
+                if (availableStack.Count() == 0)
+                {
+                    Debug.Log("Camera error when retrieving blocks from stack");
+                    return null;
+                }
+                var pick = availableStack.First();
+
+                //set the next block in the center of the given blocks
+                var center = topLayer.First().Base.Center + (topLayer.Last().Base.Center - topLayer.First().Base.Center) / 2;
+                var place = new Orient(center, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 0);
+                _structure.Add(new Block(place, _tileSize));
+
+                nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place };
+            }
+            else
+            {
+                //Scenario D: put a block on top (2 blocks base)
+                nextPickAndPlace = BlockOnTop(topLayer);
+            }
         }
-        else
+        else if (topLayer.Count() == 3)
         {
-            blockBase = new Domain(topBlock.Base.Max, bottomBlock.Base.Min);
-            //Debug.Log($"blockbase{blockBase.Size}");
+            //Scenario D: put a block on top (3 blocks base)
+            nextPickAndPlace = BlockOnTop(topLayer);
         }
 
-        float problem = blockBase.Center - topBlock.Base.Center;
-        return blockBase.Center + problem;
+        return nextPickAndPlace;
     }
 
-
-
-
-
-
-
-    Domain GetIntersection(Domain top, Domain bottom)
+    /// <summary>
+    /// Requires the list of topblocks, sorted ascending  (from small X to big X)
+    /// </summary>
+    PickAndPlaceData BlockOnTop(List<Block> topLayer)
     {
-        Domain intersection;
-        if (bottom.Max > top.Min && bottom.Max < top.Max && bottom.Min > top.Min && bottom.Min < top.Max)
+        Message = "Scenario D";
+        //now wait for human interaction
+        _wait = true;
+        _human = true;
+
+        PickAndPlaceData nextPickAndPlace;
+        //Scenario D: place the block in the middle of the other blocks
+        Debug.Log("D: Placing a block on top");
+
+        // Get a new block from the stack
+        var availableStack = ScanConstruction(_rectStack);
+        //check if it actually scanned blocks
+        if (availableStack.Count() == 0)
         {
-            intersection = new Domain(top.Max, top.Max);
-        }
-        if (bottom.Max > top.Min && bottom.Max < top.Max)
-        {
-            intersection = new Domain(top.Min, bottom.Max);
-        }
-        else if (bottom.Min > top.Min && bottom.Min < top.Max)
-        {
-            intersection = new Domain(bottom.Min, top.Max);
-        }
-        else
-        {
-            //Debug.Log("No Intersections");
+            Debug.Log("Camera error when retrieving blocks from stack");
             return null;
         }
+        var pick = availableStack.First();
 
-        return intersection;
-    }
+        //find the domain betwee the minimum and the maximum building areas of the toplayer
+        Domain availableDomain = new Domain(topLayer.First().Base.Min + _tolerance, topLayer.Last().Base.Max - _tolerance);
 
-    void SetLayer()
-    {
-        foreach (var block in _structure)
-        {
-            block.Layer = (int)((block.Orient.Center.y - (_tileSize.z / 2)) / _tileSize.y);
-            if (block.Layer > _layers) _layers++;
-        }
-        //Debug.Log($"Setting Layers: Max layer = {_layers}");
+        //Select a random location within the domain
+        float placeX = Random.Range(availableDomain.Min * 1.00f, availableDomain.Max * 1.00f);
+
+        //set the height Y one layer up + extra tollerance 
+        float placeY = topLayer.First().Orient.Center.y + _tileSize.y + _gap;
+        float placeZ = topLayer.First().Orient.Center.z;
+
+        Orient place = new Orient(placeX, placeY, placeZ, 0);
+
+        //add block to structure
+        _structure.Add(new Block(place, _tileSize));
+
+        nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place };
+
+        return nextPickAndPlace;
     }
 
     List<Orient> ScanConstruction(Rect rectangle)
     {
-
         var topLayer = _camera.GetTiles(rectangle).ToList();
 
         if (topLayer == null)
@@ -289,53 +250,34 @@ public class StackingTeamA : IStackable
         return topLayer;
     }
 
-    Vector3 GetCenterOfMass(List<Orient> orients)
-    {
-        Vector3 centerOfMass = Vector3.zero;
-
-        foreach (var orient in orients)
-        {
-            centerOfMass += orient.Center;
-        }
-        centerOfMass /= orients.Count;
-        Debug.Log($"Center of mass of {orients.Count} Blocks: {centerOfMass}");
-        return centerOfMass;
-    }
-
-
-
-
     class SimulatedCamera : ICamera
     {
         Queue<Orient[]> _sequence;
         List<Orient> _topLayer = new List<Orient>
         {
-           new Orient(0.8f,0.045f,0.3f,0),
-           new Orient(0.89f,0.09f,0.3f,0)
-           /*,
-           new Orient(1.05f,0.045f,0.3f,0),
-           new Orient(0.9f,0.09f,0.3f,0),
-           new Orient(1f,0.135f,0.3f,0),
-           new Orient(0.8f,0.135f,0.3f,0)*//*,
-           new Orient(1.1f,0.180f,0.3f,0),
-           new Orient(1.2f,0.225f,0.3f,0),
-           new Orient(1.3f,0.270f,0.3f,0),
-           new Orient(1.2f,0.315f,0.3f,0),
-           new Orient(1.4f,0.315f,0.3f,0)*/
-           /*new Orient(0.8f,0.045f,0.3f,0),
-           new Orient(1f,0.045f,0.3f,0),
-           new Orient(1.2f,0.045f,0.3f,0),
-           new Orient(0.7f,0.09f,0.3f,0),
-           new Orient(0.9f,0.09f,0.3f,0),
-           new Orient(1.1f,0.09f,0.3f,0),
-           new Orient(1.2f,0.135f,0.3f,0)*/
+            //test Scenario A
+            
+            new Orient(0.98f,0.045f,0.3f,0),
+            new Orient(0.7f,0.045f,0.3f,0)
+
+            //test scenario B
+
+            //test scenario C
+            /*
+            new Orient(1.15f,0.045f,0.3f,0),
+            new Orient(0.7f,0.045f,0.3f,0)
+            */
+            //test scenario D
+            /*
+            new Orient(0.9f,0.045f,0.3f,0),
+           new Orient(0.7f,0.045f,0.3f,0)
+           */
         };
 
         public SimulatedCamera()
         {
-
             var t = new[]
-            {
+{
            new Orient(0.1f,0.045f,0.3f,90.0f),
            new Orient(0.2f,0.045f,0.1f,30.0f),
            new Orient(0.4f,0.045f,0.3f,45.0f),
@@ -351,15 +293,6 @@ public class StackingTeamA : IStackable
            new Orient[0]
         });
         }
-
-        /* public void SetTopLayer(List<Block> topLayer, int layers)
-        {
-            
-            foreach (var block in topLayer.Where(s => s.Layer == layers))
-            {
-                _topLayer.Add(block.Orient);
-            }
-        }*/
 
         public IList<Orient> GetTiles(Rect area)
         {
