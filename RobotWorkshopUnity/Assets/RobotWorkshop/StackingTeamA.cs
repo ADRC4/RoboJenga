@@ -389,6 +389,7 @@ public class StackingTeamA : IStackable
         return new Vector3(biggestProblem, problemCenter, problemLayer);
     }
 
+
     Orient GetNextOrient(Vector3 vecBiggestProblem)
     {
         Orient nextOrients = new Orient();
