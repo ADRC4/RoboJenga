@@ -198,7 +198,6 @@ public class StackingTeamA : IStackable
     /// </summary>
     PickAndPlaceData BlockOnTop(List<Block> topLayer)
     {
-        Message = "Scenario D";
         //now wait for human interaction
         _wait = true;
         _human = true;
@@ -216,6 +215,8 @@ public class StackingTeamA : IStackable
             return null;
         }
         var pick = availableStack.First();
+
+        Message = "Scenario D";
 
         //find the domain betwee the minimum and the maximum building areas of the toplayer
         Domain availableDomain = new Domain(topLayer.First().Base.Min + _tolerance, topLayer.Last().Base.Max - _tolerance);
