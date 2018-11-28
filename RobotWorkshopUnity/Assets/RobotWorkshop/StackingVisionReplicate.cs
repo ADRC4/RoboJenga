@@ -6,18 +6,24 @@ public class StackingVisionReplicate : IStackable
 {
     public string Message { get; private set; }
     public IEnumerable<Orient> Display { get; }
+    //Block Dimesions: 180mm, 60mm, 45mm
+    float _dimX = 0.18f;
+    float _dimY = 0.045f;
+    float _dimZ = 0.06f;
 
     readonly Vector3 _placePoint = new Vector3(0.9f, 0, 0.4f);
     readonly Vector3 _tileSize = new Vector3(0.18f, 0.045f, 0.06f);
     readonly Rect _rect;
     readonly float _gap = 0.01f;
-
+    readonly ICamera _camera;
+    
     bool _isScanning = true;
     int _tileCount = 0;
     List<Orient> _pickTiles = new List<Orient>();
 
     public StackingVisionReplicate()
     {
+        
         Message = "Replicate vision stacking.";
         float m = 0.02f;
         _rect = new Rect(0 + m, 0 + m, 0.7f - m * 2, 0.8f - m * 2);
