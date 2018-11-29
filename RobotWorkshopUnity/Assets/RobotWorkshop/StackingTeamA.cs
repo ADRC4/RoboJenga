@@ -66,8 +66,8 @@ public class StackingTeamA : IStackable
         Message = "TeamA Stacking";
         _mode = mode;
         float m = 0.02f;
-        _rectStack = new Rect(0 + m, 0 + m, 0.5f - m * 2, 0.8f - m * 2);
-        _rectConstruction = new Rect(0.5f + m, 0 + m, 0.9f - m * 2, 0.8f - m * 2);
+        _rectStack = new Rect(0.9f + m, 0 + m, 0.5f - m * 2, 0.8f - m * 2);
+        _rectConstruction = new Rect(0f + m, 0 + m, 0.9f - m * 2, 0.8f - m * 2);
         _structure = new List<Block>();
 
         if (mode == Mode.Virtual)
@@ -139,7 +139,7 @@ public class StackingTeamA : IStackable
             {
                 Message = "Scenario A";
                 //Scenario A: check if the two blocks are too far away
-                Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 0);
+                Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 180);
                 nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = true };
                 _structure.Remove(topLayer.Last());
                 _structure.Add(new Block(place, _tileSize));
@@ -149,7 +149,7 @@ public class StackingTeamA : IStackable
             {
                 Message = "Scenario B";
                 //Scenario B: check if the blocks are too close to eachother to fit another block, but too far to use the topspace
-                Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 0);
+                Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 180);
                 nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = true };
                 _structure.Remove(topLayer.Last());
                 _structure.Add(new Block(place, _tileSize));
@@ -173,10 +173,10 @@ public class StackingTeamA : IStackable
 
                 //set the next block in the center of the given blocks
                 var center = topLayer.First().Base.Center + (topLayer.Last().Base.Center - topLayer.First().Base.Center) / 2;
-                var place = new Orient(center, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 0);
+                var place = new Orient(center, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 180);
                 _structure.Add(new Block(place, _tileSize));
 
-                nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place };
+                nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place ,Retract = true};
             }
             else
             {
@@ -228,27 +228,28 @@ public class StackingTeamA : IStackable
         float placeY = topLayer.First().Orient.Center.y + _tileSize.y + _gap;
         float placeZ = topLayer.First().Orient.Center.z;
 
-        Orient place = new Orient(placeX, placeY, placeZ, 0);
+        Orient place = new Orient(placeX, placeY, placeZ, 180);
 
         //add block to structure
         _structure.Add(new Block(place, _tileSize));
 
-        nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place };
+        nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place , Retract = true};
 
         return nextPickAndPlace;
     }
 
     List<Orient> ScanConstruction(Rect rectangle)
     {
-        var topLayer = _camera.GetTiles(rectangle).ToList();
+        var topLayer = _camera.GetTiles(rectangle);
 
         if (topLayer == null)
         {
             Message = "Camera error.";
             return null;
         }
+        Debug.Log($"{topLayer.Count()} number of blocks scanned");
         Message = "Scanning blocks";
-        return topLayer;
+        return topLayer.ToList();
     }
 
     class SimulatedCamera : ICamera
