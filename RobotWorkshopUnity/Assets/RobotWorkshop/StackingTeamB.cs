@@ -47,7 +47,7 @@ public class StackingTeamB : IStackable
             _camera = new VirtualCamera();
         else
             _camera = new LiveCamera();
-        MakePickTower();
+
 
 
     }
