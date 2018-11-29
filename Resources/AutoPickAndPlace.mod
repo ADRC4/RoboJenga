@@ -20,7 +20,7 @@ MODULE AutoPickAndPlace
     PROC main()
         ConfL\Off;
 
-        MoveAbsJ [[0.000,0.000,18.000,0.000,-18.000,0.000],exj],v500,fine,gripper\WObj:=frame;
+        MoveAbsJ [[0.000,0.000,30.000,0.000,60.000,0.000],exj],v500,fine,gripper\WObj:=frame;
         SetDO \Sync ,DO10_1,0;
 
         ClientConnect;

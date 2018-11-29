@@ -115,7 +115,7 @@ public class Motive : IDisposable
             markers = motive.GetUnlabledMarkers().ToArray();
         }
 
-        if (basePoints.Length != 3)
+        if (basePoints.Length < 3)
         {
             Debug.Log("Error in base frame markers.");
             return null;
@@ -125,7 +125,7 @@ public class Motive : IDisposable
 
         var sortedBasePoints = basePoints.OrderBy(m => m.magnitude).ToList();
         var origin = sortedBasePoints[0];
-        var vx = sortedBasePoints[2] - origin;
+        var vx = sortedBasePoints.Last() - origin;
         var vz = sortedBasePoints[1] - origin;
         var vy = Vector3.Cross(vz, vx);
         vz = Vector3.Cross(vx, vy);
