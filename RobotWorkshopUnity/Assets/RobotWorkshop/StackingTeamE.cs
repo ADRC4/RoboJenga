@@ -45,7 +45,7 @@ public class StackingTeamE : IStackable
             return null;
         }
 
-        var closestEnds = ClosestEnds(topLayer);
+        var closestEnds = ClosestJoints(topLayer);
 
         var mid = Vector3.Lerp(closestEnds[0], closestEnds[1], 0.5f);
 
@@ -73,16 +73,16 @@ public class StackingTeamE : IStackable
         return new[] { orient.Center + delta, orient.Center - delta };
     }
 
-    //public float jointDistanceMax
-    //{
-    //    get { return jointDistanceMax; }
-    //    set { if (value >= 0f || value <= 0.15f) { jointDistanceMax = value; } }
-    //}
+    public float jointDistanceScale
+    {
+        get { return jointDistanceScale; }
+        set { if (value >= 0f || value <= 0.15f) { jointDistanceScale = value; } }
+    }
 
-    Vector3[] ClosestEnds(IList<Orient> blocks)
+    Vector3[] ClosestJoints(IList<Orient> blocks)
     {
 
-        float closestDistance = float.MaxValue;
+        float closestDistance = jointDistanceScale;
         Vector3[] currentClosestPair = null;
 
         for (int i = 0; i < blocks.Count - 1; i++)
@@ -153,15 +153,6 @@ public class StackingTeamE : IStackable
              new Orient(1.2f,0.045f,0.3f,45f),
             };
 
-            _placeSequence = new Queue<Orient[]>(new[]
-            {
-                //new[] {t[0],t[1],t[2],t[3],t[4],t[5]},
-                //new[] {t[0],t[1],t[2],t[3],t[4]},
-                //new[] {t[0],t[1],t[2],t[3]},
-                new[] {v[0],v[1],v[2]},
-                new[] {v[0],v[1]},
-                new Orient[0]
-            });
 
         }
 
