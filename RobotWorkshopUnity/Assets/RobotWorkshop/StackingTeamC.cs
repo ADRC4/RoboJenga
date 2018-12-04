@@ -8,12 +8,12 @@ public class StackingTeamC : IStackable
     public IEnumerable<Orient> Display { get { return _placedTiles; } }
 
     readonly Rect _pickRect;
-    readonly Rect _buildRect1;
-    //readonly Rect _buildRect2;
+    readonly Rect _buildRect;
     readonly ICamera _camera;
 
-
     List<Orient> _placedTiles = new List<Orient>();
+
+    List<Orient> _currentLayer = null;
 
     int _loopCount = 0;
     float _mirrorPoint;
@@ -23,8 +23,7 @@ public class StackingTeamC : IStackable
         Message = "Simple vision stacking.";
         float m = 0.02f;
         _pickRect = new Rect(1f + m, 0 + m, 0.4f - m * 2, 0.8f - m * 2);
-        _buildRect1 = new Rect(0 + m, 0 + m, 1f - m * 2, 0.8f - m * 2);
-        //_buildRect2 = new Rect(0.5f + m, 0 + m, 0.5f - m * 2, 0.8f - m * 2);
+        _buildRect = new Rect(0 + m, 0 + m, 1f - m * 2, 0.8f - m * 2);
 
         if (mode == Mode.Virtual)
             _camera = new VirtualCamera();
@@ -34,125 +33,67 @@ public class StackingTeamC : IStackable
 
     public PickAndPlaceData GetNextTargets()
     {
-        for (int i = 0; i < 12; i++)
+        if (_currentLayer == null)
         {
-            var pickTiles = _camera.GetTiles(_pickRect);
+            _currentLayer = _camera.GetTiles(_buildRect).ToList();
 
-            if (pickTiles == null)
+            if (_currentLayer == null)
             {
                 Message = "Camera error.";
                 return null;
             }
-
-            if (pickTiles.Count == 0)
-            {
-                Message = "No more tiles to pick.";
-                return null;
-            }
-
-            var pick = pickTiles.First();
-
-
-            var buildTiles = _camera.GetTiles(_pickRect);
-
-            if (buildTiles == null)
-            {
-                Message = "Camera error.";
-                return null;
-            }
-
-            if (buildTiles.Count == 0)
-            {
-                Message = "No tiles in build area.";
-                return null;
-            }
-
-            var tile = buildTiles.First();
-
-            if (_loopCount == 0)
-            {
-                float distance = 0.3f;
-                _mirrorPoint = tile.Center.x + distance * 0.5f;
-                return null;
-            }
-
-
-            var distanceToCenter = _mirrorPoint - tile.Center.x;
-            var pos = tile.Center;
-            pos.x = _mirrorPoint + distanceToCenter;
-
-            var xAxis = tile.Rotation * Vector3.right;
-
-            var angle = Vector3.SignedAngle(xAxis, Vector3.forward, Vector3.up);
-            var rotation = Quaternion.Euler(0, -angle, 0);
-
-            Orient place = new Orient(pos, rotation);
-
-            _placedTiles.Add(place);
-
-            return new PickAndPlaceData { Pick = pick, Place = place };
         }
 
-
-        for (int j = 12; j <= 12; j++)
+        if (_currentLayer.Count == 0)
         {
-            var pickTiles = _camera.GetTiles(_pickRect);
-
-            if (pickTiles == null)
-            {
-                Message = "Camera error.";
-                return null;
-            }
-
-            if (pickTiles.Count == 0)
-            {
-                Message = "No more tiles to pick.";
-                return null;
-            }
-
-            var pick = pickTiles.First();
-
-
-            var buildTiles = _camera.GetTiles(_buildRect1);
-
-            if (buildTiles == null)
-            {
-                Message = "Camera error.";
-                return null;
-            }
-
-            if (buildTiles.Count == 0)
-            {
-                Message = "No tiles in build area.";
-                return null;
-            }
-
-            var tile = buildTiles.First();
-
-            if (_loopCount == 0)
-            {
-                float distance = 0.12f;
-                _mirrorPoint = tile.Center.z + distance * 0.5f;
-                return null;
-            }
-
-
-            var distanceToCenter = _mirrorPoint - tile.Center.z;
-            var pos = tile.Center;
-            pos.z = _mirrorPoint + distanceToCenter;
-
-            var zAxis = tile.Rotation * Vector3.up;
-
-            var angle = Vector3.SignedAngle(zAxis, Vector3.right, Vector3.up);
-            var rotation = Quaternion.Euler(-angle, 0, 0);
-
-            Orient place = new Orient(pos, rotation);
-
-            _placedTiles.Add(place);
-
-            return new PickAndPlaceData { Pick = pick, Place = place };
+            Message = "Add a new layer of tiles.";
+            _currentLayer = null;
+            return null;
         }
-        return null;
+
+        if (_loopCount == 0)
+        {
+            var rightMostTile = _currentLayer.OrderByDescending(t => t.Center.x).First();
+            float distance = 0.3f;
+            _mirrorPoint = rightMostTile.Center.x + distance * 0.5f;
+        }
+
+        var tile = _currentLayer.Last();
+        _currentLayer.RemoveAt(_currentLayer.Count - 1);
+        Message = $"{_currentLayer.Count} tiles left on current layer.";
+
+        var distanceToCenter = _mirrorPoint - tile.Center.x;
+        var pos = tile.Center;
+        pos.x = _mirrorPoint + distanceToCenter;
+
+        var xAxis = tile.Rotation * Vector3.right;
+
+        var angle = Vector3.SignedAngle(xAxis, Vector3.forward, Vector3.up);
+        var rotation = Quaternion.Euler(0, -angle, 0);
+
+        Orient place = new Orient(pos, rotation);
+
+        _placedTiles.Add(place);
+
+
+        // pick tile
+        var pickTiles = _camera.GetTiles(_pickRect);
+
+        if (pickTiles == null)
+        {
+            Message = "Camera error.";
+            return null;
+        }
+
+        if (pickTiles.Count == 0)
+        {
+            Message = "No more tiles to pick.";
+            return null;
+        }
+
+        var pick = pickTiles.First();
+
+        _loopCount++;
+        return new PickAndPlaceData { Pick = pick, Place = place };
     }
 }
-
