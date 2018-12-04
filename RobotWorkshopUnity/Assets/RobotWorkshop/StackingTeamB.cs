@@ -58,7 +58,7 @@ public class StackingTeamB : IStackable
 
         Orient place = new Orient();
         List<Orient> _place = new List<Orient>();
-        if (singleI=0)
+        if (singleI==0)
         {
             detectFirstLayer();
         }
