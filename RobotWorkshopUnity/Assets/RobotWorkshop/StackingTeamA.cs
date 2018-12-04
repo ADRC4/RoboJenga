@@ -82,15 +82,21 @@ public class StackingTeamA : IStackable
         {
             _wait = false;
             Message = "Waiting for human interaction";
+            Debug.Log("WAIT");
             return null;
         }
         if (_human)
         {
+            Debug.Log("HUMAN");
             if (!ScanForNewTiles()) return null;
             _human = false;
             return (GetNextOrient());
         }
-        else return (GetNextOrient());
+        else
+        {
+            if (!ScanForNewTiles()) return null;
+            return GetNextOrient();
+        }
     }
 
     bool ScanForNewTiles()
@@ -105,7 +111,7 @@ public class StackingTeamA : IStackable
         //Make sure that there are no duplicates
         //get the layer of the scanned elements
         int scannedLayer = (int)((newTiles.First().Center.y - (_tileSize.y / 2)) / _tileSize.y);
-        if (scannedLayer == _numberOfLayers && _mode == Mode.Live)
+        /*if (scannedLayer == _numberOfLayers && _mode == Mode.Live)
         {
             //remove the top layer
             var topLayer = _structure.Where(s => s.Layer == _numberOfLayers);
@@ -113,8 +119,9 @@ public class StackingTeamA : IStackable
             {
                 _structure.Remove(block);
             }
-        }
+        }*/
 
+        _structure = new List<Block>();
         //Assign the scanned blocks to _structure
         _structure.AddRange(newTiles.Select(x => new Block(x, _tileSize)));
         Debug.Log($"{_structure.Count} blocks in structure");
@@ -140,7 +147,7 @@ public class StackingTeamA : IStackable
                 Message = "Scenario A";
                 //Scenario A: check if the two blocks are too far away
                 Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 180);
-                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = true };
+                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = false };
                 _structure.Remove(topLayer.Last());
                 _structure.Add(new Block(place, _tileSize));
                 Debug.Log("A: Too far");
@@ -150,7 +157,7 @@ public class StackingTeamA : IStackable
                 Message = "Scenario B";
                 //Scenario B: check if the blocks are too close to eachother to fit another block, but too far to use the topspace
                 Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 180);
-                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = true };
+                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = false };
                 _structure.Remove(topLayer.Last());
                 _structure.Add(new Block(place, _tileSize));
                 Debug.Log("B: Too close");
@@ -176,7 +183,7 @@ public class StackingTeamA : IStackable
                 var place = new Orient(center, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 180);
                 _structure.Add(new Block(place, _tileSize));
 
-                nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place ,Retract = true};
+                nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place ,Retract = false };
             }
             else
             {
@@ -188,6 +195,11 @@ public class StackingTeamA : IStackable
         {
             //Scenario D: put a block on top (3 blocks base)
             nextPickAndPlace = BlockOnTop(topLayer);
+        }
+        else
+        {
+            Debug.Log("Only one topblock scanned");
+            return null;
         }
 
         return nextPickAndPlace;
