@@ -7,24 +7,20 @@ public class StackingTeamB : IStackable
 {
     public string Message { get; private set; }
     public IEnumerable<Orient> Display { get { return _placedTiles; } }
-    readonly Rect _Jengarect;
+    readonly Rect _Pickrect;
     readonly Rect _HumanRect;
     readonly Rect _Robotrect;
-    readonly Vector3 _pickPoint = new Vector3(1.1f, 0, 0.02f);
-    int remainTiles = 45;
 
-    int layer = 1;
+    int layer = 0;
+    int singleI = 0;
     List<Vector3> gravityCenter = new List<Vector3>();
     List<detectHuman> firstLayer = new List<detectHuman>();
     List<Orient> secondLayer = new List<Orient>();
-    int singleI = 0;
-
 
     readonly Rect _rect;
     readonly ICamera _camera;
     readonly Vector3 _tileSize = new Vector3(0.18f, 0.045f, 0.06f);
     readonly int _tileCount = 45;
-    readonly float _gap = 0.005f;
 
     List<Orient> _placedTiles = new List<Orient>();
     List<Orient> _pickTiles = new List<Orient>();
@@ -39,140 +35,49 @@ public class StackingTeamB : IStackable
     {
         Message = "Simple vision stacking.";
         float m = 0.02f;
-        _HumanRect = new Rect(0 + m, 0 + m, 0.4f - m * 2, 0.8f - m * 2);
-        // _Jengarect = new Rect(0.9f + m, 0 + m, 0.9f - m * 2, 0.8f - m * 2);
-        _Robotrect = new Rect(0.4f + m, 0 + m, 0.4f - m * 2, 0.8f - m * 2);
 
+        //define a rectangle area
+        _HumanRect = new Rect(0 + m, 0 + m, 0.4f - m * 2, 0.8f - m * 2);
+        _Pickrect = new Rect(1.0f + m, 0 + m, 0.4f - m * 2, 0.8f - m * 2);
+        // _Jengarect = new Rect(0.9f + m, 0 + m, 0.9f - m * 2, 0.8f - m * 2);
+        // _RobotRect = new Rect(0.4f + m, 0 + m, 0.4f - m * 2, 0.8f - m * 2);
+
+        //scan according to mode
         if (mode == Mode.Virtual)
             _camera = new VirtualCamera();
         else
             _camera = new LiveCamera();
-
-
-
-    }
-
-    public Orient PutSameLayerNextTarget()
-    {
-        Orient place = new Orient();
-        if (layer == 1)
-        {
-            List<Orient> _place = new List<Orient>();
-
-            //扫描第一层人区，获得firstLayer
-            detectFirstLayer();
-
-            foreach (var i in firstLayer)
-            {
-                place = i.Orient;
-
-                place.Center.x += 0.700f;
-                place.Center.y += (layer - 0.5f) * _tileSize.y;
-
-
-                _place.Add(place);
-            }
-            Vector3 calCenter = new Vector3();
-            for (int i = 0; i < _place.Count; i++)
-            {
-
-                calCenter += new Vector3(_place[i].Center.x, 0.5f * _tileSize.y, _place[i].Center.z);
-
-            }
-            Vector3 thisCenter = new Vector3(calCenter.x / _place.Count, 0.5f * _tileSize.y, calCenter.z / _place.Count);
-
-            gravityCenter.Add(thisCenter);
-            //计算第1层位置，获得第一层gravityCenter
-            place = placeLocation()[singleI];
-
-        }
-        else
-        {
-            //扫描新的人区
-            detectSecondLayer();
-            //确定取的位置
-            place = placeLocation()[singleI];
-
-
-
-            singleI++;
-            if (singleI == placeLocation().Count)
-            {
-                layer += 1;
-                //每当singleI==(placeLocation().Count-secondLayer.Count)
-
-
-
-
-
-                //生成新的secondlayer
-
-                //重新设定第一层布尔
-
-                //执行一次placeLocation获取新一层的放置位置
-                placeLocation();
-            }
-        }
-
-        return place;
-    }
-
-    void MakePickTower()
-    {
-        for (int i = 0; i < _tileCount; i++)
-        {
-            var next = JengaLocation(i);
-            _pickTiles.Add(new Orient(_pickPoint + next.Center, next.Rotation));
-        }
-    }
-
-    void detectFirstLayer()
-    {
-        var topLayer = ScanConstruction(_HumanRect);
-        //if (/*topLayer != null*/ )
-        //{
-        foreach (var detect in topLayer)
-        {
-            if (detect.Center.y < 0.045)
-            {
-                detectHuman element = new detectHuman();
-                element.Orient = detect;
-                element.ifVacant = true;
-                firstLayer.Add(element);
-            }
-
-        }
-        //}
-
+        
 
     }
 
-    void detectSecondLayer()
-    {
-        var topLayer = ScanConstruction(_HumanRect);
-
-        foreach (var i in topLayer)
-        {
-            if (i.Center.y > 0.045)
-            {
-                secondLayer.Add(i);
-            }
-
-        }
-
-    }
-
+    //每次在robot里面run一次pick&place
+    //这里让机器人动起来，要看有没有output这些error
     public PickAndPlaceData GetNextTargets()
     {
 
-        //if (layer==1)
-        //{
-        //detectFirstLayer();
-        //}
+        Orient place = new Orient();
+        List<Orient> _place = new List<Orient>();
+        if (singleI==0)
+        {
+            detectFirstLayer();
+        }
+        //识别用于搭建的木块
+        var pickrectTiles = _camera.GetTiles(_Pickrect);
 
+        if (pickrectTiles == null)
+        {
+            Message = "Camera error.";
+            return null;
+        }
 
-
-
+        if (pickrectTiles.Count == 0)
+        {
+            Message = "No more tiles to pick.";
+            return null;
+        }
+        //pick 
+        var pick = pickrectTiles.First();
 
         if (firstLayer == null)
         {
@@ -180,38 +85,108 @@ public class StackingTeamB : IStackable
             return null;
         }
 
-        if (remainTiles == 0)
+        //when put first layer//place
+        if (layer == 0)
         {
-            Message = "No more tiles.";
-            return null;
+
+            foreach (var i in firstLayer)
+            {
+                var pieceOfFirstLayer = i.Orient;
+                //改变值放到place这个list里
+                //calculate the position of the first layer
+                pieceOfFirstLayer.Center.x += 0.500f;
+                _place.Add(pieceOfFirstLayer);
+            }
+
+            //calculate the gravity centre of first layer
+            calculateNewGravityCenter(_place);
+
+            //放下的position  要得到place的orient 所以call了
+            place = _place[singleI];
+            singleI++;
+
+            if (singleI == firstLayer.Count)
+            {
+                layer++;
+                singleI = 0;
+
+            }
+
+            return new PickAndPlaceData { Pick = pick, Place = place }; //get layer1 success first
         }
-        var pick = _pickTiles.Last();
 
-        var place = PutSameLayerNextTarget();
-        remainTiles -= 1;
+        else
+        {
+            if (singleI == 0)
+            {
+                detectSecondLayer();
+                detectVacancy();
+                _place = placeLocation();
+                calculateNewGravityCenter(_place);
+            }
+            place = _place[singleI];
+            if (singleI == placeLocation().Count)
+            {
+                singleI = 0;
+                layer += 1;
+            }
+            return new PickAndPlaceData { Pick = pick, Place = place };
+        }
 
-        return new PickAndPlaceData { Pick = pick, Place = place };
 
     }
 
-    //List<Orient> placeFirstLocation()
-    //{
-    //    List<Orient> _place = new List<Orient>();
-    //    foreach (var i in firstLayer)
-    //    {
-    //        var place = i.Orient;
-    //        if (i.ifVacant == true)
-    //        {
 
-    //            place.Center.x += 0.700f;
-    //            place.Center.y += (layer - 0.5f) * _tileSize.y;
-    //            _placedTiles.Add(place);
-    //        }
-    //        _place.Add(place);
-    //    }
-    //    return _place;
-    //}
+    //检测第一层位置method
+    void detectFirstLayer()
+    {//pieces in the area
+        var topLayer = ScanConstruction(_HumanRect);
+        //may return null，!null check
+        if (topLayer != null)
+        {
+            foreach (var detect in topLayer)
+            {     //y是不是小于0.045 要验证所有条件判断
+                if (detect.Center.y < 0.05)
+                {
+                    detectHuman element = new detectHuman();
+                    element.Orient = detect;
+                    ////new default is true
+                    firstLayer.Add(element);
+                    //not detected write error
+                }
 
+            }
+        }
+    }
+
+    //检测第二层位置method
+    void detectSecondLayer()
+    {
+
+        var topLayer = ScanConstruction(_HumanRect);
+
+        foreach (var i in topLayer)
+        {
+            if (i.Center.y > 0.05)
+            {
+                secondLayer.Add(i);
+            }
+        }
+    }
+
+
+    //new gravity centre
+    void calculateNewGravityCenter(List<Orient> _place)
+    {
+        Vector3 calCenter = new Vector3();
+        foreach (var i in _place)
+        {
+            calCenter += new Vector3(i.Center.x, 0.5f * _tileSize.y, i.Center.z);
+        }
+
+        Vector3 thisCenter = new Vector3(calCenter.x / _place.Count, 0.5f * _tileSize.y, calCenter.z / _place.Count);
+        gravityCenter.Add(thisCenter);
+    }
 
     public void detectVacancy()
     {
@@ -233,65 +208,62 @@ public class StackingTeamB : IStackable
         }
     }
 
-    //public List<Orient > placeOfFirstLocation()
-    //{
-
-    //    return 
-    //}
-
-
-
-
-    //将要放置的方块的位置列表
+    //define a new orient go through firstlayer
     public List<Orient> placeLocation()
     {
         List<Orient> _place = new List<Orient>();
-        foreach (var i in firstLayer)
+        float jiaoDu = 90;
+        float angle = 3.1415f / 180 * jiaoDu;
+
+        foreach (var i in firstLayer) //遍历firstlayer
         {
             var place = i.Orient;
-            int count = 0;
-            float jiaoDu = 90;
-            float angle = 3.1415f / 180 * jiaoDu;
+
             if (i.ifVacant)
             {
-                count++;
-                place.Center.x += 0.700f;
-                place.Center.y += (layer - 0.5f) * _tileSize.y;
 
-                //设定这一层的扭转角度
-
-                bool isEven = layer % 2 == 0;
                 Vector3 position = place.Center;
 
-                //float tempoX = gravityCenter[layer].x - position.x;
-                //float tempoZ = gravityCenter[layer].z - position.z;
+                Vector3 gravityCenterHumanFirst = gravityCenter[0];
+                gravityCenterHumanFirst.x -= 0.5f;
 
-                var rotation = Quaternion.Euler(0, isEven ? 0 : -90, 0);
-                //Vector3 postPosition = new Vector3();
-                //扭转角度 绕取到的中心点旋转
-                position.x = (float)((position.x - gravityCenter[layer].x) * Math.Cos(angle) - (position.y - gravityCenter[layer].y) * Math.Sin(angle) + gravityCenter[layer].x);
-                position.z = (float)((position.z - gravityCenter[layer].z) * Math.Cos(angle) - (position.z - gravityCenter[layer].z) * Math.Sin(angle) + gravityCenter[layer].z);
-                place = new Orient(position, rotation);
+                //move to place area
+                float deltaX = position.x - gravityCenterHumanFirst.x;
+                float deltaZ = position.z - gravityCenterHumanFirst.z;
+                position.x = gravityCenter[layer].x + deltaX;
+                position.z = gravityCenter[layer].z + deltaZ;
 
 
-                _place[count] = place;
+
+                position.y = (layer + 1) * _tileSize.y;
+                bool isEven = true;
+                if (layer % 2 != 0)
+                {
+                    isEven = false;
+                    var rotation = Quaternion.Euler(0, isEven ? 0 : -1 * jiaoDu, 0); //define the angle of rotation，explain:isEven；三段表达 ？千面有个表达式true or false 如果是true 返回0；如果false 返回-90，0
+
+                    //rotate angle, and rotate centre //return（0，0，0）；（0，-90，0）
+                    //spin
+                    position.x = (float)((position.x - gravityCenter[layer].x) * Math.Cos(angle) - (position.x - gravityCenter[layer].x) * Math.Sin(angle) + gravityCenter[layer].x);
+                    position.z = (float)((position.z - gravityCenter[layer].z) * Math.Cos(angle) - (position.z - gravityCenter[layer].z) * Math.Sin(angle) + gravityCenter[layer].z);
+
+
+                    place.Center = position;
+                    place.Rotation = rotation;
+                }
+
+                _place.Add(place);
             }
 
         }
-        Vector3 calCenter = new Vector3();
-        for (int i = 0; i < _place.Count; i++)
-        {
+        //计算新的重心 方法还没完  一通乱算后 
 
-            calCenter += new Vector3(_place[i].Center.x, (layer - 0.5f) * _tileSize.y, _place[i].Center.z);
+        calculateNewGravityCenter(_place);//gravity of this layer
 
-        }
-        Vector3 thisCenter = new Vector3(calCenter.x / _place.Count, (layer - 0.5f) * _tileSize.y, calCenter.z / _place.Count);
 
-        gravityCenter.Add(thisCenter);
-
-        singleI = 0;
-        return _place;
+        return _place;//返回place的数组
     }
+
 
     IList<Orient> ScanConstruction(Rect rectangle)
     {
@@ -307,15 +279,5 @@ public class StackingTeamB : IStackable
         return topLayer;
     }
 
-    Orient JengaLocation(int index)
-    {
-        int count = index;
-        int layer = count / 3;
-        int row = count % 3;
-        bool isEven = layer % 2 == 0;
 
-        Vector3 position = new Vector3(0, (layer + 1) * _tileSize.y, (row - 1) * _tileSize.z);
-        var rotation = Quaternion.Euler(0, isEven ? 0 : -90, 0);
-        return new Orient(rotation * position, rotation);
-    }
 }

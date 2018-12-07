@@ -53,10 +53,10 @@ public class StackingTeamA : IStackable
 
     Mode _mode;
 
-    List<Block> _structure;
+    List<Block> _structure, _previousLayer;
 
     bool _human = true, _wait = true;
-    int _numberOfLayers;
+    int _numberOfLayers, _scannedLayer;
     float _gripperSpace = 0.03f;
 
     //GLOBAL CONSTRUCTOR_______________________________________________________________________
@@ -66,9 +66,10 @@ public class StackingTeamA : IStackable
         Message = "TeamA Stacking";
         _mode = mode;
         float m = 0.02f;
-        _rectStack = new Rect(0.9f + m, 0 + m, 0.5f - m * 2, 0.8f - m * 2);
-        _rectConstruction = new Rect(0f + m, 0 + m, 0.9f - m * 2, 0.8f - m * 2);
+        _rectStack = new Rect(0f + m, 0 + m, 0.5f - m * 2, 0.8f - m * 2);
+        _rectConstruction = new Rect(0.5f + m, 0 + m, 0.9f - m * 2, 0.8f - m * 2);
         _structure = new List<Block>();
+        _previousLayer = new List<Block>();
 
         if (mode == Mode.Virtual)
             _camera = new SimulatedCamera();
@@ -82,15 +83,21 @@ public class StackingTeamA : IStackable
         {
             _wait = false;
             Message = "Waiting for human interaction";
+            Debug.Log("WAIT");
             return null;
         }
         if (_human)
         {
+            Debug.Log("HUMAN");
             if (!ScanForNewTiles()) return null;
             _human = false;
             return (GetNextOrient());
         }
-        else return (GetNextOrient());
+        else
+        {
+            if (!ScanForNewTiles()) return null;
+            return GetNextOrient();
+        }
     }
 
     bool ScanForNewTiles()
@@ -104,8 +111,8 @@ public class StackingTeamA : IStackable
 
         //Make sure that there are no duplicates
         //get the layer of the scanned elements
-        int scannedLayer = (int)((newTiles.First().Center.y - (_tileSize.y / 2)) / _tileSize.y);
-        if (scannedLayer == _numberOfLayers && _mode == Mode.Live)
+        _scannedLayer = (int)((newTiles.First().Center.y - (_tileSize.y / 2)) / _tileSize.y);
+        /*if (scannedLayer == _numberOfLayers && _mode == Mode.Live)
         {
             //remove the top layer
             var topLayer = _structure.Where(s => s.Layer == _numberOfLayers);
@@ -113,8 +120,10 @@ public class StackingTeamA : IStackable
             {
                 _structure.Remove(block);
             }
-        }
+        }*/
+        _previousLayer = _structure;
 
+        _structure = new List<Block>();
         //Assign the scanned blocks to _structure
         _structure.AddRange(newTiles.Select(x => new Block(x, _tileSize)));
         Debug.Log($"{_structure.Count} blocks in structure");
@@ -130,6 +139,13 @@ public class StackingTeamA : IStackable
         //order list ascending (small X to large X)
         topLayer = topLayer.OrderBy(o => o.Base.Center).ToList(); //checked and worked
 
+        if(_scannedLayer == 0)
+        {
+            _previousLayer = topLayer;
+        }
+
+        
+
         //check the distance between the two blocks
         if (topLayer.Count() == 2)
         {
@@ -140,7 +156,7 @@ public class StackingTeamA : IStackable
                 Message = "Scenario A";
                 //Scenario A: check if the two blocks are too far away
                 Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 180);
-                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = true };
+                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = false };
                 _structure.Remove(topLayer.Last());
                 _structure.Add(new Block(place, _tileSize));
                 Debug.Log("A: Too far");
@@ -150,7 +166,7 @@ public class StackingTeamA : IStackable
                 Message = "Scenario B";
                 //Scenario B: check if the blocks are too close to eachother to fit another block, but too far to use the topspace
                 Orient place = new Orient(topLayer.First().Orient.Center.x + _gripperSpace + _tileSize.x, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 180);
-                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = true };
+                nextPickAndPlace = new PickAndPlaceData { Pick = topLayer.Last().Orient, Place = place, Retract = false };
                 _structure.Remove(topLayer.Last());
                 _structure.Add(new Block(place, _tileSize));
                 Debug.Log("B: Too close");
@@ -176,7 +192,7 @@ public class StackingTeamA : IStackable
                 var place = new Orient(center, topLayer.First().Orient.Center.y, topLayer.First().Orient.Center.z, 180);
                 _structure.Add(new Block(place, _tileSize));
 
-                nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place ,Retract = true};
+                nextPickAndPlace = new PickAndPlaceData { Pick = pick, Place = place ,Retract = false };
             }
             else
             {
@@ -188,6 +204,11 @@ public class StackingTeamA : IStackable
         {
             //Scenario D: put a block on top (3 blocks base)
             nextPickAndPlace = BlockOnTop(topLayer);
+        }
+        else
+        {
+            Debug.Log("Only one topblock scanned");
+            return null;
         }
 
         return nextPickAndPlace;
@@ -203,7 +224,7 @@ public class StackingTeamA : IStackable
         _human = true;
 
         PickAndPlaceData nextPickAndPlace;
-        //Scenario D: place the block in the middle of the other blocks
+        
         Debug.Log("D: Placing a block on top");
 
         // Get a new block from the stack
@@ -218,8 +239,45 @@ public class StackingTeamA : IStackable
 
         Message = "Scenario D";
 
-        //find the domain betwee the minimum and the maximum building areas of the toplayer
-        Domain availableDomain = new Domain(topLayer.First().Base.Min + _tolerance, topLayer.Last().Base.Max - _tolerance);
+        /*
+        //Check if the distance in the previous layer was smaller than in the toplayer, use the smallest
+        float previousDistance = Mathf.Abs(_previousLayer.First().Base.Center - _previousLayer.Last().Base.Center) - _tileSize.x;
+        float currentDistance = Mathf.Abs(topLayer.First().Base.Center - topLayer.Last().Base.Center) - _tileSize.x;
+       
+        Domain availableDomain;
+        if (previousDistance<currentDistance)
+        {
+            //find the domain betwee the minimum and the maximum building areas of the previous layer
+            availableDomain = new Domain(_previousLayer.First().Base.Min + _tolerance, _previousLayer.Last().Base.Max - _tolerance);
+        }
+        else
+        {
+            //find the domain betwee the minimum and the maximum building areas of the previous layer
+            availableDomain = new Domain(topLayer.First().Base.Min + _tolerance, topLayer.Last().Base.Max - _tolerance);
+        }
+        */
+
+        // find the min and max of the top and previous domain
+        float min, max;
+        if(_previousLayer.First().Base.Min<topLayer.First().Base.Min)
+        {
+            min = topLayer.First().Base.Min;
+        }
+        else
+        {
+            min = _previousLayer.First().Base.Min;
+        }
+
+        if (_previousLayer.Last().Base.Max > topLayer.Last().Base.Max)
+        {
+            max = topLayer.Last().Base.Max;
+        }
+        else
+        {
+            max = _previousLayer.Last().Base.Max;
+        }
+        Domain availableDomain = new Domain(min, max);
+
 
         //Select a random location within the domain
         float placeX = Random.Range(availableDomain.Min * 1.00f, availableDomain.Max * 1.00f);
