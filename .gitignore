@@ -34,3 +34,7 @@ sysinfo.txt
 *.apk
 *.unitypackage
 /RobotWorkshopUnity/Assets/RobotWorkshop/StackingTeamC.cs.meta
+
+# Rhino
+*.3dmbak
+*.rhl
