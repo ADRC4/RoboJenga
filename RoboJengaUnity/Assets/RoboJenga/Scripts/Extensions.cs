@@ -23,7 +23,6 @@ public class PickAndPlaceData
 }
 
 public enum Mode { Virtual, Live };
-public enum Team { Debug, TeamA, TeamB, TeamC, TeamD, TeamE };
 
 
 static class Extensions

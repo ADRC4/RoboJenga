@@ -24,10 +24,9 @@ public class StackingVisionSimple : IStackable
 
     public PickAndPlaceData GetNextTargets()
     {
-        Debug.Log("GetNextTargets");
         var topLayer = _camera.GetTiles(_rect);
 
-        if (topLayer == null) //no blocks scanned
+        if (topLayer == null)
         {
             Message = "Camera error.";
             return null;
