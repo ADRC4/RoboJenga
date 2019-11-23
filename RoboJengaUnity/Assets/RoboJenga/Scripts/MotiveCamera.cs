@@ -79,7 +79,7 @@ class MotiveCamera : ICamera
 
     Pose? FindTile(Vector3 marker, IEnumerable<Vector3> topLayerMarkers)
     {
-        float xLength = 0.175f;
+        float xLength = 0.180f - 0.008f;
         float zLength = 0.02f;
         float epsilon = 0.01f;
         float epsilonDeg = 5f;
