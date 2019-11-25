@@ -140,7 +140,8 @@ public class Controller : MonoBehaviour
     void Initialize()
     {
         // robot 
-        var origin = new[] { 500.900f, 678.200f, 192.100f, -0.6991f, 0.0012f, 0.0028f, 0.7150f };
+        //var origin = new[] { 500.900f, 678.200f, 192.100f, -0.6991f, 0.0012f, 0.0028f, 0.7150f };
+        var origin = new[] { 555.500f, 644.000f, 194.400f, 0.69813f, -0.00181f, 0.00000f, -0.71597f }; //This was copied from RobotStudio's updated AutoPickAndPlace
         _robot = Robot.IRB1600(origin);
 
         // materials
