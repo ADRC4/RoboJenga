@@ -11,7 +11,7 @@ class VirtualCamera_WALDO : ICamera
 
     public VirtualCamera_WALDO()
     {
-        _sequence = TXTReader.GetPosesQueue("WALDO/testData_W");
+        //_sequence = TXTReader.GetPosesQueue("WALDO/testData_W");
 
     }
 
