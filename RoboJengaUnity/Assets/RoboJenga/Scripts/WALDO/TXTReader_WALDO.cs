@@ -4,9 +4,9 @@ using UnityEngine;
 using System.Globalization;
 using System.Threading;
 
-public static class TXTReader /*: MonoBehaviour*/
+public static class TXTReader_WALDO /*: MonoBehaviour*/
 {
-    static TXTReader()
+    static TXTReader_WALDO()
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
     }
