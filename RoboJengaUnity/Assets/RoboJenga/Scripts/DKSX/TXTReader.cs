@@ -11,7 +11,7 @@ public static class TXTReader /*: MonoBehaviour*/
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
     }
 
-    public static Queue<Pose[]> GetPoses(string testData)
+    public static Queue<Pose[]> GetPosesQueue(string testData)
     {
 
         Queue<Pose[]> ReadVectors = new Queue<Pose[]>();
@@ -49,10 +49,10 @@ public static class TXTReader /*: MonoBehaviour*/
     }
 
 
-    public static List<Vector3> GetVectors(string testData)
+    public static List<Pose> GetPoses(string testData)
     {
-
-        List<Vector3> vectors = new List<Vector3>();
+        
+        List<Pose> poses = new List<Pose>();
 
         var dataSet = Resources.Load<TextAsset>(testData);
         string[] data = dataSet.text.Split(new char[] { ';' });
@@ -65,9 +65,8 @@ public static class TXTReader /*: MonoBehaviour*/
             float z = float.Parse(coord[1], CultureInfo.InvariantCulture.NumberFormat);
             float a = float.Parse(coord[3], CultureInfo.InvariantCulture.NumberFormat);
 
-            vectors.Add(new Vector3(x, y, z));
+            poses.Add(Extensions.PoseFromRotation(x, y, z, a));
         }
-        return vectors;
-
+        return poses;
     }
 }
