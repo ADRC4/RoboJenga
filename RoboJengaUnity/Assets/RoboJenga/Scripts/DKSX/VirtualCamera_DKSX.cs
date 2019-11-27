@@ -11,7 +11,7 @@ class VirtualCamera_DKSX : ICamera
 
     public VirtualCamera_DKSX()
     {
-        _sequence = TXTReader.GetPoses("DKSX/testData");
+        _sequence = TXTReader.GetPosesQueue("DKSX/testData");
    
     }
 
