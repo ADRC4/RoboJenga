@@ -28,7 +28,7 @@ public class StackingVisionVoidMirror : IStackable
             _camera = new MotiveCamera();
 
         Message = "Void Mirror vision stacking.";
-        float m = 0.02f;
+        float m = 0.20f;
         _rect = new Rect(0 + m, 0 + m, 0.7f - m * 2, 0.8f - m * 2);
     }
 
@@ -94,7 +94,7 @@ public class StackingVisionVoidMirror : IStackable
         bool isEven = layer % 2 == 0;
 
         Vector3 position = new Vector3(0, (layer + 1) * _tileSize.y, (horiz - 1) * (_tileSize.z + _gap));
-        var rotation = Quaternion.Euler(0, isEven ? 0 : -90, 0) * Quaternion.Euler(0, 180f, 0);
+        var rotation = Quaternion.Euler(0, isEven ? 0 : -60, 0) * Quaternion.Euler(0, 120f, 0);
         return new Pose(rotation * position + _placePoint, rotation);
     }
 

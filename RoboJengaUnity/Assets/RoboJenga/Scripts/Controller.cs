@@ -116,11 +116,13 @@ public class Controller : MonoBehaviour
         _robotMessage = "Waiting for robot to connect...";
 
         _server = new Server();
+
         await _server.ConnectAsync(IP, 1025);
 
         if (_server.Connected)
         {
-            await ClientAsync();
+            if (_mode == Mode.Virtual)
+                await ClientAsync();
             _robotMessage = "Robot connected.";
         }
         else
