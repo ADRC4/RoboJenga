@@ -25,6 +25,14 @@ public class StackingCorbelling : IStackable
     Pose pose12;
     Pose pose13;
     Pose pose14;
+    Pose pose15;
+    Pose pose16;
+    Pose pose17;
+    Pose pose18;
+    Pose pose19;
+    Pose pose20;
+    Pose pose21;
+    Pose pose22;
     Pose poseBlock1;
     Pose poseBlock2;
     IList<Pose> PlacePositions = new List<Pose>();
@@ -118,12 +126,13 @@ public class StackingCorbelling : IStackable
         TwoBlocks.Add(poseBlock2);
         Display.Add(poseBlock1);
         Display.Add(poseBlock2);
-        //var margin = .04f;
-        //var blockSize = .18f;
-        // var offset = blockSize / 4;
-        var i = (vector2Blocks.magnitude) / 4;
-        Vector3 normalized = vector2Blocks.normalized * .21f;
-        Vector3 offset = normalized * i;
+        var margin = .03f;
+        var blockSize = .18f;
+        var blockPlusMargin = margin + blockSize;
+        int layers = 5;
+        Vector3 normalized = vector2Blocks.normalized * blockPlusMargin;
+        var offsetSize = ((((vector2Blocks.magnitude - blockPlusMargin) / 2) - blockPlusMargin) / (layers - 1));
+        Vector3 offset = vector2Blocks.normalized * offsetSize;
 
         //var place0 = point1 - (normalized);
         var place1 = point1 - (normalized);
@@ -146,6 +155,18 @@ public class StackingCorbelling : IStackable
         place12.y += 0.045f;
         var place13 = place11 - (normalized);
         var place14 = place12 + (normalized);
+        var place15 = place11 - (offset);
+        place15.y += 0.045f;
+        var place16 = place12 + (offset);
+        place16.y += 0.045f;
+        var place17 = place15 - (normalized);
+        var place18 = place16 + (normalized);
+        var place19 = place15 - (offset);
+        place19.y += 0.045f;
+        var place20 = place16 + (offset);
+        place20.y += 0.045f;
+        var place21 = place19 - (normalized);
+        var place22 = place20 + (normalized);
 
 
 
@@ -164,25 +185,17 @@ public class StackingCorbelling : IStackable
         pose12 = new Pose(place12, rotationVector2Blocks);
         pose13 = new Pose(place13, rotationVector2Blocks);
         pose14 = new Pose(place14, rotationVector2Blocks);
+        pose15 = new Pose(place15, rotationVector2Blocks);
+        pose16 = new Pose(place16, rotationVector2Blocks);
+        pose17 = new Pose(place17, rotationVector2Blocks);
+        pose18 = new Pose(place18, rotationVector2Blocks);
+        pose19 = new Pose(place19, rotationVector2Blocks);
+        pose20 = new Pose(place20, rotationVector2Blocks);
+        pose21 = new Pose(place21, rotationVector2Blocks);
+        pose22 = new Pose(place22, rotationVector2Blocks);
 
 
-        //Display.Add(pose1);
-        //Display.Add(pose2);
-        //Display.Add(pose3);
-        //Display.Add(pose4);
-        //Display.Add(pose5);
-        //Display.Add(pose6);
-        //Display.Add(pose7);
-        //Display.Add(pose8);
-        //Display.Add(pose9);
-        //Display.Add(pose10);
-        //Display.Add(pose11);
-        //Display.Add(pose12);
-        //Display.Add(pose13);
-        //Display.Add(pose14);
 
-
-        //PlacePositions.Add(pose0);
         PlacePositions.Add(pose1);
         PlacePositions.Add(pose2);
         PlacePositions.Add(pose3);
@@ -197,6 +210,14 @@ public class StackingCorbelling : IStackable
         PlacePositions.Add(pose12);
         PlacePositions.Add(pose13);
         PlacePositions.Add(pose14);
+        PlacePositions.Add(pose15);
+        PlacePositions.Add(pose16);
+        PlacePositions.Add(pose17);
+        PlacePositions.Add(pose18);
+        PlacePositions.Add(pose19);
+        PlacePositions.Add(pose20);
+        PlacePositions.Add(pose21);
+        PlacePositions.Add(pose22);
 
 
         Debug.Log(PlacePositions.Count);
