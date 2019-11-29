@@ -4,9 +4,9 @@ using UnityEngine;
 using System.Globalization;
 using System.Threading;
 
-public static class TXTReader_WALDO /*: MonoBehaviour*/
+public static class TXTReaderW /*: MonoBehaviour*/
 {
-    static TXTReader_WALDO()
+    static TXTReaderW()
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
     }
@@ -51,7 +51,7 @@ public static class TXTReader_WALDO /*: MonoBehaviour*/
 
     public static List<Pose> GetPoses(string testData)
     {
-        
+
         List<Pose> poses = new List<Pose>();
 
         var dataSet = Resources.Load<TextAsset>(testData);
