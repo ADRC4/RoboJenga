@@ -10,7 +10,7 @@ public class StackingOffline : IStackable
     readonly Vector3 _pickPoint = new Vector3(0.2f, 0, 0.4f);
     readonly Vector3 _placePoint = new Vector3(1.2f, 0, 0.4f);
     readonly Vector3 _tileSize = new Vector3(0.18f, 0.045f, 0.06f);
-    readonly int _tileCount = 6;
+    readonly int _tileCount = 18;
     readonly float _gap = 0.005f;
 
     List<Pose> _pickTiles = new List<Pose>();
@@ -54,12 +54,12 @@ public class StackingOffline : IStackable
     Pose JengaLocation(int index)
     {
         int count = index;
-        int layer = count / 3;
-        int row = count % 3;
+        int layer = count / 9;
+        int row = count % 9;
         bool isEven = layer % 2 == 0;
 
         Vector3 position = new Vector3(0, (layer + 1) * _tileSize.y, (row - 1) * _tileSize.z);
-        var rotation = Quaternion.Euler(0, isEven ? 0 : -90, 0);
+        var rotation = Quaternion.Euler(0, isEven ? 0 : -45, 0);
         return new Pose(rotation * position, rotation);
     }
 
@@ -71,7 +71,7 @@ public class StackingOffline : IStackable
         bool isEven = layer % 2 == 0;
 
         Vector3 position = new Vector3(0, (layer + 1) * _tileSize.y, (row - 1) * _tileSize.z + _gap);
-        var rotation = Quaternion.Euler(0, isEven ? 0 : -90, 0);
+        var rotation = Quaternion.Euler(0, isEven ? 0 : -45, 0);
         return new Pose(rotation * position, rotation);
     }
 }
